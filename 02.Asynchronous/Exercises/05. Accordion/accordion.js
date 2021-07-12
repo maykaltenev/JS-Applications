@@ -1,47 +1,66 @@
-function eFactory (tag, className = '', content = '') {
-	const e = document.createElement(tag)
-	e.className = className
-	e.textContent = content
 
-	return e
-}
 
-function template ({ _id, title }) {
-	const wrapper = eFactory('div', 'accordion')
-	const headDiv = eFactory('div', 'head')
-	const titleSpan = eFactory('span', '', title)
-	const btn = eFactory('button', 'button', 'More')
-	const extraDiv = eFactory('div', 'extra')
-	extraDiv.style.display = 'none'
-	const contentParagraph = eFactory('p')
-	btn.id = _id
+function solution() {
 
-	headDiv.append(titleSpan, btn)
-	extraDiv.appendChild(contentParagraph)
-	wrapper.append(headDiv, extraDiv)
+	let listUrl = 'http://localhost:3030/jsonstore/advanced/articles/list/';
+	let detailsUrl = 'http://localhost:3030/jsonstore/advanced/articles/details/';
+	let output = document.getElementById('main');
 
-	btn.addEventListener('click', async () => {
-		if (extraDiv.style.display === 'none') {
-			const data = await fetch(`http://localhost:3030/jsonstore/advanced/articles/details/${_id}`)
-			const desData = await data.json()
-			btn.textContent = 'Less'
-			extraDiv.style.display = 'block'
-			contentParagraph.textContent = desData.content
+	fetch(listUrl)
+		.then(data => data.json())
+		.then(dataByIdTitle => {
+			dataByIdTitle.forEach(id => {
+				fetch(`${detailsUrl}${id._id}`)
+					.then(text => text.json())
+					.then(accordion => {
+						let div = template(accordion);
+						output.appendChild(div);
+					})
+					.catch(err => console.error(err));
+			});
+		})
+		.catch(err => console.error(err));
+
+	function template(accordion) {
+		let pElement = document.createElement('p');
+		pElement.textContent = accordion.content;
+
+		let divExtraElement = document.createElement('div');
+		divExtraElement.classList.add('extra');
+		divExtraElement.appendChild(pElement);
+
+		let span = document.createElement('span');
+		span.textContent = accordion.title;
+
+		let btn = document.createElement('button');
+		btn.classList.add('button');
+		btn.id = accordion._id;
+		btn.textContent = 'More';
+		btn.addEventListener('click', moreLess);
+
+		let headDivElement = document.createElement('div');
+		headDivElement.classList.add('head');
+		headDivElement.appendChild(span);
+		headDivElement.appendChild(btn);
+
+		let accordionDivElement = document.createElement('div');
+		accordionDivElement.classList.add('accordion');
+		accordionDivElement.appendChild(headDivElement);
+		accordionDivElement.appendChild(divExtraElement)
+
+		return accordionDivElement;
+	}
+
+	function moreLess(e) {
+		let toggleSwitch = e.currentTarget.parentElement.parentElement.children[1];
+		if (e.currentTarget.textContent == 'More') {
+			toggleSwitch.style.display = 'block';
+			e.currentTarget.textContent = 'Less';
 		} else {
-			btn.textContent = 'More'
-			extraDiv.style.display = 'none'
+			toggleSwitch.style.display = 'none';
+			e.currentTarget.textContent = 'More';
 		}
-	})
-
-	return wrapper
+	}
 }
 
-async function solution () {
-	const output = document.getElementById('main')
-	const titles = await fetch('http://localhost:3030/jsonstore/advanced/articles/list')
-	const desTitles = await titles.json()
-
-	desTitles.forEach(x => output.appendChild(template(x)))
-}
-
-document.addEventListener('DOMContentLoaded', solution)
+solution()
